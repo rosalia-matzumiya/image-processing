@@ -31,7 +31,8 @@ const unzip = (pathIn, pathOut) => {
 };
 
 /**
- * Description: read all the png files from given directory and return Promise containing array of each png file path 
+ * Description: read all the png files from given directory 
+ * and return Promise containing array of each png file path 
  * 
  * @param {string} path 
  * @return {promise}
@@ -63,7 +64,42 @@ const readDir = dir => {
  * @return {promise}
  */
 const grayScale = (pathIn, pathOut) => {
+  return new Promise((resolve, reject) => {
+    if (!fs.existsSync(pathOut)) {
+      fs.mkdir(pathOut, err => {
+        if (err) {
+          if (err.code === "EEXIST") {
+            console.log("Sorry this folder name already exists. Please choose another name.");
+          }
+          console.log(err);
+        }
+      })
+    }
 
+    fs.createReadStream(pathIn)
+      .pipe(
+        new PNG({
+          filterType: 4,
+        })
+      )
+      .on('parsed', function () {
+
+        // source: https://www.npmjs.com/package/pngjs
+        for (var y = 0; y < this.height; y++) {
+          for (var x = 0; x < this.width; x++) {
+            var idx = (this.width * y + x) << 2;
+
+            let gray = this.data[idx] + this.data[idx + 1] + this.data[idx + 2] / 3;
+
+            this.data[idx] = gray;
+            this.data[idx + 1] = gray;
+            this.data[idx + 2] = gray;
+
+          }
+        }
+        this.pack().pipe(fs.createWriteStream(pathOut));
+      });
+  });
 };
 
 module.exports = {
