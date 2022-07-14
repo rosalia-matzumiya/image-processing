@@ -11,7 +11,8 @@
 const unzipper = require('unzipper'),
   fs = require("fs"),
   PNG = require('pngjs').PNG,
-  path = require('path');
+  path = require('path'),
+  EXTENSION = ".png";
 
 
 /**
@@ -23,10 +24,10 @@ const unzipper = require('unzipper'),
  */
 const unzip = (pathIn, pathOut) => {
   return fs.createReadStream(pathIn)
-    .pipe(unzipper.Extract({path: pathOut}))
-    .promise()
+    .pipe(unzipper.Extract({ path: pathOut }))
     .on('entry', entry => entry.autodrain())
-    .then(() => console.log("Extraction operation complete"), err, console.log("Extraction operation failed"), err)
+    .promise()
+    .then(() => console.log('Extraction operation complete'), err, console.log('Extraction operation failed'), err)
 };
 
 /**
@@ -36,6 +37,21 @@ const unzip = (pathIn, pathOut) => {
  * @return {promise}
  */
 const readDir = dir => {
+  return new Promise((resolve, reject) => {
+    fs.readdir(dir, (err, files) => {
+      if (err) {
+        reject(`Sorry this directory ${dir} doesn't exist`)
+      } else {
+        const pngImages = [];
+        files.forEach((file) => {
+          if (path.extname(`${dir}/${file}`) === EXTENSION) {
+            pngImages.push(file);
+          }
+        })
+        resolve(pngImages)
+      }
+    })
+  })
 };
 
 /**
