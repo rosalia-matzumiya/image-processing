@@ -3,8 +3,8 @@
  * File Name: IOhandler.js
  * Description: Collection of functions for files input/output related operations
  * 
- * Created Date: 
- * Author: 
+ * Created Date: 06/30/2022
+ * Author: Rosalia Matzumiya Garcia
  * 
  */
 
@@ -22,7 +22,11 @@ const unzipper = require('unzipper'),
  * @return {promise}
  */
 const unzip = (pathIn, pathOut) => {
-
+  return fs.createReadStream(pathIn)
+    .pipe(unzipper.Extract({path: pathOut}))
+    .promise()
+    .on('entry', entry => entry.autodrain())
+    .then(() => console.log("Extraction operation complete"), err, console.log("Extraction operation failed"), err)
 };
 
 /**
@@ -32,7 +36,6 @@ const unzip = (pathIn, pathOut) => {
  * @return {promise}
  */
 const readDir = dir => {
-
 };
 
 /**
