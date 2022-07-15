@@ -25,10 +25,11 @@ const unzipper = require('unzipper'),
  * @return {promise}
  */
 const unzip = (pathIn, pathOut) => {
-  return fs.createReadStream(pathIn)
-    .pipe(unzipper.Extract({ path: pathOut }))
-    .on('entry', entry => entry.autodrain())
-    .promise();
+  return new Promise((resolve, reject) => {
+    fs.createReadStream(pathIn)
+      .pipe(unzipper.Extract({ path: pathOut }))
+      .on('entry', entry => entry.autodrain())
+  });
 };
 
 /**
@@ -42,11 +43,23 @@ const readDir = dir => {
   return new Promise((resolve, reject) => {
     fs.readdir(dir, (err, files) => {
       if (err) {
-        reject(`Sorry this directory ${dir} doesn't exist`)
+        if (err.code === "ENOENT") {
+          fs.mkdir(FILE_PATH, err => {
+            if (err) {
+              if (err.code === "EEXIST") {
+                console.log("Sorry this folder name already exists. Please choose another name.");
+              }
+              else {
+                reject(err);
+              }
+            }
+            console.log(`The directory ${dir} has been created for you`);
+          })
+        }
       } else {
         const pngImages = [];
         files.forEach((file) => {
-          if (path.extname(`${dir}/${file}`) === EXTENSION) {
+          if (path.extname(FILE_PATH + `/${file}`) === EXTENSION) {
             pngImages.push(file);
           }
         })
@@ -66,45 +79,37 @@ const readDir = dir => {
  */
 const grayScale = (pathIn, pathOut) => {
   return new Promise((resolve, reject) => {
-    if (!fs.existsSync(pathOut)) {
-      fs.mkdir(pathOut, err => {
-        if (err) {
-          if (err.code === "EEXIST") {
-            console.log("Sorry this folder name already exists. Please choose another name.");
-          }
-          console.log(err);
-        }
-      })
-    }
+    if (err) {
+      reject(err);
+    } else {
+      pathIn.forEach((pngImg) => {
+        fs.createReadStream(FILE_PATH + `/${pngImg}`)
+          .pipe(
+            new PNG({
+              filterType: 4,
+            })
+          )
+          .on('parsed', function () {
 
-    pathIn.forEach((pngImg) => {
-      // console.log(`test path.join ${FILE_PATH}`);
-      // console.log(FILE_PATH + `/${pngImg}`);
+            // source: https://www.npmjs.com/package/pngjs
+            for (var y = 0; y < this.height; y++) {
+              for (var x = 0; x < this.width; x++) {
+                var idx = (this.width * y + x) << 2;
 
-      fs.createReadStream(FILE_PATH + `/${pngImg}`)
-        .pipe(
-          new PNG({
-            filterType: 4,
-          })
-        )
-        .on('parsed', function () {
+                let gray = this.data[idx] + this.data[idx + 1] +
+                  0.11 + this.data[idx + 2] / 3;
 
-          // source: https://www.npmjs.com/package/pngjs
-          for (var y = 0; y < this.height; y++) {
-            for (var x = 0; x < this.width; x++) {
-              var idx = (this.width * y + x) << 2;
+                this.data[idx] = gray;
+                this.data[idx + 1] = gray;
+                this.data[idx + 2] = gray;
 
-              let gray = this.data[idx] + this.data[idx + 1] + this.data[idx + 2] / 3;
-
-              this.data[idx] = gray;
-              this.data[idx + 1] = gray;
-              this.data[idx + 2] = gray;
-
+              }
             }
-          }
-          this.pack().pipe(fs.createWriteStream(`${pathOut}/${pngImg}`));
-        });
-    });
+            this.pack().pipe(fs.createWriteStream(`${pathOut}/${pngImg}`));
+          });
+      });
+      resolve(pathIn);
+    }
   });
 };
 
