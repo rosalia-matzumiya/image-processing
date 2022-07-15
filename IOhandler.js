@@ -9,10 +9,12 @@
  */
 
 const unzipper = require('unzipper'),
-  fs = require("fs"),
+  fs = require('fs'),
   PNG = require('pngjs').PNG,
   path = require('path'),
-  EXTENSION = ".png";
+  EXTENSION = '.png',
+  FOLDER_PATH = 'unzipped',
+  FILE_PATH = path.join(__dirname, FOLDER_PATH);
 
 
 /**
@@ -26,8 +28,7 @@ const unzip = (pathIn, pathOut) => {
   return fs.createReadStream(pathIn)
     .pipe(unzipper.Extract({ path: pathOut }))
     .on('entry', entry => entry.autodrain())
-    .promise()
-    .then(() => console.log('Extraction operation complete'), err, console.log('Extraction operation failed'), err)
+    .promise();
 };
 
 /**
@@ -76,29 +77,34 @@ const grayScale = (pathIn, pathOut) => {
       })
     }
 
-    fs.createReadStream(pathIn)
-      .pipe(
-        new PNG({
-          filterType: 4,
-        })
-      )
-      .on('parsed', function () {
+    pathIn.forEach((pngImg) => {
+      // console.log(`test path.join ${FILE_PATH}`);
+      // console.log(FILE_PATH + `/${pngImg}`);
 
-        // source: https://www.npmjs.com/package/pngjs
-        for (var y = 0; y < this.height; y++) {
-          for (var x = 0; x < this.width; x++) {
-            var idx = (this.width * y + x) << 2;
+      fs.createReadStream(FILE_PATH + `/${pngImg}`)
+        .pipe(
+          new PNG({
+            filterType: 4,
+          })
+        )
+        .on('parsed', function () {
 
-            let gray = this.data[idx] + this.data[idx + 1] + this.data[idx + 2] / 3;
+          // source: https://www.npmjs.com/package/pngjs
+          for (var y = 0; y < this.height; y++) {
+            for (var x = 0; x < this.width; x++) {
+              var idx = (this.width * y + x) << 2;
 
-            this.data[idx] = gray;
-            this.data[idx + 1] = gray;
-            this.data[idx + 2] = gray;
+              let gray = this.data[idx] + this.data[idx + 1] + this.data[idx + 2] / 3;
 
+              this.data[idx] = gray;
+              this.data[idx + 1] = gray;
+              this.data[idx + 2] = gray;
+
+            }
           }
-        }
-        this.pack().pipe(fs.createWriteStream(pathOut));
-      });
+          this.pack().pipe(fs.createWriteStream(`${pathOut}/${pngImg}`));
+        });
+    });
   });
 };
 
